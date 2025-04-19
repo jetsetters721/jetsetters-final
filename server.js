@@ -38,15 +38,40 @@ app.use((req, res, next) => {
 });
 
 // Test Supabase connection
-const testSupabaseConnection = async () => {
+const testSupabaseConnection = async (retryCount = 0, maxRetries = 5) => {
   try {
+    console.log(`📡 Testing Supabase connection (attempt ${retryCount + 1}/${maxRetries + 1})...`);
     const { data, error } = await supabase.from('users').select('count').single();
-    if (error) throw error;
+    
+    if (error) {
+      if (retryCount < maxRetries) {
+        console.warn(`⚠️ Supabase connection error: ${error.message}. Retrying in 3 seconds...`);
+        setTimeout(() => testSupabaseConnection(retryCount + 1, maxRetries), 3000);
+        return false;
+      } else {
+        console.error('❌ Failed to connect to Supabase after multiple attempts:', error.message);
+        console.log('The server will continue running, but database operations may fail.');
+        console.log('Possible issues:');
+        console.log('  - Supabase credentials in .env file may be incorrect');
+        console.log('  - Supabase service may be down or unreachable');
+        console.log('  - Required tables may not exist in your Supabase project');
+        console.log('You can use "node setup-supabase-tables.js" to create the required tables.');
+        return false;
+      }
+    }
+    
     console.log('✅ Supabase connection established successfully.');
     return true;
   } catch (error) {
-    console.error('❌ Unable to connect to Supabase:', error.message);
-    return false;
+    if (retryCount < maxRetries) {
+      console.warn(`⚠️ Error connecting to Supabase: ${error.message}. Retrying in 3 seconds...`);
+      setTimeout(() => testSupabaseConnection(retryCount + 1, maxRetries), 3000);
+      return false;
+    } else {
+      console.error('❌ Failed to connect to Supabase after multiple attempts:', error.message);
+      console.log('The server will continue running, but database operations may fail.');
+      return false;
+    }
   }
 };
 

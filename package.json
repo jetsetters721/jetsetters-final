@@ -2,15 +2,21 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "start": "node server.js",
+        "start": "NODE_ENV=production node server.js",
         "server": "nodemon server.js",
         "client": "vite",
-        "dev": "concurrently \"npm run server\" \"npm run client\"",
+        "dev": "node start-dev.js",
+        "dev:legacy": "concurrently \"npm run server\" \"npm run client\" \"npm run supabase:check\"",
         "build": "vite build",
-        "vercel-build": "vite build && cp -r api dist/api",
+        "prod": "node start-prod.js",
+        "prod:vercel": "vercel deploy --prod",
+        "prod:setup": "node -e \"const fs = require('fs'); if(!fs.existsSync('.env.production')) { fs.copyFileSync('.env', '.env.production'); console.log('Created .env.production'); }\" && npm run build",
+        "vercel-build": "vite build && node vercel-setup.js",
         "render-build": "node render-setup.js",
         "postinstall": "npm install @vitejs/plugin-react vite --no-save || true",
-        "supabase": "node start-app.js"
+        "supabase": "node start-app.js",
+        "supabase:check": "node -e \"const { exec } = require('child_process'); exec('node setup-supabase-tables.js', (error, stdout, stderr) => { console.log(stdout); if (error) { console.error('Error checking Supabase tables:', error); } });\"",
+        "deploy": "npm run build && npm run start"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
